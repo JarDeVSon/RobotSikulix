@@ -1,4 +1,4 @@
-name: Robot Sikuli - Linux CI
+name: Robot Sikuli - Linux CI (Modo NEW Corrigido)
 
 on:
   push:
@@ -9,7 +9,7 @@ jobs:
   sikuli-linux:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
@@ -31,98 +31,71 @@ jobs:
           sudo apt-get install -y \
             xvfb \
             x11-utils \
-            x11-apps \
             libxtst6 \
             libxrender1 \
             libxi6 \
             wget
 
-      - name: Instalar APENAS a biblioteca correta
+      - name: Instalar biblioteca Robot e Sikuli
         run: |
           pip install --upgrade pip
           pip install robotframework
-          # Instalar APENAS a biblioteca SikuliLibrary (que você já tem funcionando)
+          # Instala APENAS a biblioteca cliente
           pip install robotframework-SikuliLibrary
-          
-          # Verificar instalação CORRETA
-          python -c "import SikuliLibrary; print('✅ SikuliLibrary importada com sucesso')"
+          python -c "import SikuliLibrary; print('✅ SikuliLibrary importada')"
 
-      - name: Baixar SikuliX JAR
+      - name: Baixar SikuliX API JAR
         run: |
           wget -O sikulixapi.jar "https://launchpad.net/sikuli/sikulix/2.0.5/+download/sikulixapi-2.0.5.jar"
           echo "✅ JAR baixado: $(ls -lh sikulixapi.jar)"
 
-      - name: Preparar ambiente
-        run: |
-          # Criar diretórios necessários
-          mkdir -p results/screenshots ~/.Sikulix/SikulixStore
-          
-          # Configurar arquivo do SikuliX (resolve erro "FileManager: writeStringToFile")
-          echo "$(pwd)/sikulixapi.jar" > ~/.Sikulix/SikulixStore/lastUsedJar.txt
-          
-          echo "✅ Ambiente preparado"
-
       - name: Configurar display virtual Xvfb
         run: |
-          # Iniciar Xvfb (ignorar warnings do xkbcomp)
-          Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset 2>/dev/null &
-          sleep 5
-          
+          Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset &
           export DISPLAY=:99
-          
-          # Testar se o display funciona
+          sleep 5
           if xdpyinfo -display $DISPLAY > /dev/null 2>&1; then
-            echo "✅ Display virtual configurado: $DISPLAY"
+            echo "✅ Display virtual OK"
           else
-            echo "❌ Falha no display virtual"
-            exit 1
+            echo "❌ Display virtual falhou"; exit 1
           fi
 
-      - name: Iniciar SikuliX Server CORRETAMENTE
+      - name: Iniciar Servidor Sikuli Remoto (Modo NEW)
         run: |
-          echo "Iniciando SikuliX Server..."
-          # O comando CORRETO para SikuliX 2.0.5: iniciar servidor na porta automática
-          java -jar sikulixapi.jar -s -p 0 &
-          SIKULI_PID=$!
+          # Esta é a forma CORRETA de iniciar o servidor remoto incluído na biblioteca
+          # O servidor precisa do JAR do SikuliX no classpath
+          java -cp "sikulixapi.jar:/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/SikuliLibrary/lib/SikuliLibrary.jar" \
+               org.robotframework.remoteserver.RemoteServer \
+               --library SikuliLibrary.SikuliLibrary \
+               --port 10000 \
+               --allow-stop true &
+          SERVER_PID=$!
           sleep 10
-          
-          # Verificar se o processo Java do SikuliX está rodando
-          if ps -p $SIKULI_PID > /dev/null; then
-            echo "✅ SikuliX Server iniciado (PID: $SIKULI_PID)"
-            # Verificar a porta
-            echo "Verificando portas abertas pelo Java:"
-            netstat -tlnp | grep java || echo "Não foi possível verificar a porta com netstat, tentando lsof..."
-            lsof -i -P -n | grep java 2>/dev/null || echo "lsof não disponível"
+          if ps -p $SERVER_PID > /dev/null; then
+            echo "✅ Servidor remoto iniciado (PID: $SERVER_PID) na porta 10000"
           else
-            echo "❌ SikuliX Server não iniciou"
-            echo "Tentando ver o log do processo:"
-            # Não temos o log, mas podemos tentar ver se há algum erro no início
-            # Vamos tentar iniciar em primeiro plano para ver o erro
-            java -jar sikulixapi.jar -s -p 0 2>&1 | head -50
-            exit 1
+            echo "❌ Servidor não iniciou. Verifique o classpath e logs."; exit 1
           fi
-      - name: Executar testes
+
+      - name: Executar testes Robot
         run: |
-          echo "=== EXECUTANDO TESTES ==="
-          
-          # IMPORTANTE: A biblioteca SikuliLibrary espera a variável SIKULI_PATH
+          # A variável REMOTE_SERVER_URL é usada pela biblioteca em modo NEW
+          export REMOTE_SERVER_URL=http://127.0.0.1:10000
           export SIKULI_PATH=$(pwd)/sikulixapi.jar
-          
-          # Executar testes com timeout maior
+
           robot -d results \
+                --variable REMOTE_SERVER_URL:$REMOTE_SERVER_URL \
                 --variable SIKULI_PATH:$SIKULI_PATH \
-                --variable DISPLAY:$DISPLAY \
-                --variable PORT:$SIKULI_PID \
-                --variable TIMEOUT:60 \
-                --loglevel TRACE \
+                --variable DISPLAY::99 \
+                --variable DEFAULT_TIMEOUT:60 \
+                --loglevel DEBUG \
                 tests/
-          
           echo "✅ Testes executados"
 
-      - name: Limpar processos
+      - name: Parar servidor remoto e limpar
         if: always()
         run: |
-          pkill -f "sikulixapi" 2>/dev/null || true
+          pkill -f "RemoteServer" 2>/dev/null || true
           pkill -f "Xvfb.*:99" 2>/dev/null || true
 
       - name: Publicar resultados
