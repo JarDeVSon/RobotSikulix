@@ -73,13 +73,12 @@ jobs:
           # NOTA: A classe principal pode ser diferente. Vamos tentar a mais comum.
           java -cp "$LIB_JAR_PATH:sikulixapi.jar" \
                org.robotframework.remoteserver.RemoteServer \
-               --port 10000 \
                --allow-stop true &
           SERVER_PID=$!
           sleep 10
           # Verifica se a porta está aberta
           if netstat -tln | grep :10000 > /dev/null; then
-            echo "✅ Servidor remoto ouvindo na porta 10000 (PID: $SERVER_PID)"
+            echo "✅ Servidor remoto ouvindo na porta(PID: $SERVER_PID)"
           else
             echo "❌ Servidor não está ouvindo na porta 10000. Tentando diagnóstico..."
             # Tenta ver se o processo Java está vivo e qual porta está usando
