@@ -1,7 +1,7 @@
 * Settings *
 Documentation       Tudo deve começar por aqui
 
-Library         SikuliLibrary    mode=NEW    port=10000
+Library         SikuliLibrary    mode=NEW
 Library         Process
 Resource        actions/pdv.robot
 
