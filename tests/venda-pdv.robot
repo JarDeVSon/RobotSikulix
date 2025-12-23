@@ -1,7 +1,7 @@
 * Settings *
 Documentation       Suite de teste de venda no PDV
 
-Resource        ${EXECDIR}\\resources\\base.robot
+Resource        ../resources/base.robot
 
 Test Setup   Inicia Sessão
 Suite Teardown  Encerrar Sessão
