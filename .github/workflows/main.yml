@@ -112,6 +112,7 @@ jobs:
           robot -d results \
                 --variable SIKULI_PATH:$SIKULI_PATH \
                 --variable DISPLAY:$DISPLAY \
+                --variable PORT:$SIKULI_PID \
                 --variable TIMEOUT:60 \
                 --loglevel TRACE \
                 tests/
