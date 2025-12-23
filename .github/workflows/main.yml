@@ -81,17 +81,26 @@ jobs:
       - name: Iniciar SikuliX Server CORRETAMENTE
         run: |
           echo "Iniciando SikuliX Server..."
-          # O comando CORRETO para SikuliX 2.0.5
-          java -jar sikulixapi.jar -r -s &
+          # O comando CORRETO para SikuliX 2.0.5: iniciar servidor na porta automática
+          java -jar sikulixapi.jar -s -p 0 &
+          SIKULI_PID=$!
           sleep 10
           
-          # Verificar se Java está rodando
-          if pgrep -f "sikulixapi" > /dev/null; then
-            echo "✅ SikuliX Server iniciado"
+          # Verificar se o processo Java do SikuliX está rodando
+          if ps -p $SIKULI_PID > /dev/null; then
+            echo "✅ SikuliX Server iniciado (PID: $SIKULI_PID)"
+            # Verificar a porta
+            echo "Verificando portas abertas pelo Java:"
+            netstat -tlnp | grep java || echo "Não foi possível verificar a porta com netstat, tentando lsof..."
+            lsof -i -P -n | grep java 2>/dev/null || echo "lsof não disponível"
           else
-            echo "⚠️  SikuliX pode não ter iniciado, mas continuando..."
+            echo "❌ SikuliX Server não iniciou"
+            echo "Tentando ver o log do processo:"
+            # Não temos o log, mas podemos tentar ver se há algum erro no início
+            # Vamos tentar iniciar em primeiro plano para ver o erro
+            java -jar sikulixapi.jar -s -p 0 2>&1 | head -50
+            exit 1
           fi
-
       - name: Executar testes
         run: |
           echo "=== EXECUTANDO TESTES ==="
@@ -104,7 +113,6 @@ jobs:
                 --variable SIKULI_PATH:$SIKULI_PATH \
                 --variable DISPLAY:$DISPLAY \
                 --variable TIMEOUT:60 \
-                --screenshot onfailure \
                 --loglevel TRACE \
                 tests/
           
