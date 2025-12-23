@@ -104,7 +104,6 @@ jobs:
                 --variable SIKULI_PATH:$SIKULI_PATH \
                 --variable DISPLAY:$DISPLAY \
                 --variable TIMEOUT:60 \
-                --screenshot onfailure \
                 --loglevel TRACE \
                 tests/
           
