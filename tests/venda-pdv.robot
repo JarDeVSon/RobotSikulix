@@ -4,6 +4,7 @@ Documentation       Suite de teste de venda no PDV
 Resource        ..//resources//base.robot
 
 Test Setup   Inicia Sessão
+Suite Setup    Start Sikuli Process
 Suite Teardown  Encerrar Sessão
 Test Teardown   Finaliza Teste
 

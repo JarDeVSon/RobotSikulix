@@ -1,13 +1,12 @@
 * Settings *
 Documentation       Tudo deve começar por aqui
 
-Library         SikuliLibrary    mode=NEW
+Library         SikuliLibrary    mode=NEW    port=10000
 Library         Process
 Resource        actions/pdv.robot
 
 * Keywords *
 Carrega os Elementos do App
-    Start Sikuli Process
     ${app_dir}=    Set Variable    ${EXECDIR}//app
     ${proc}=    Start Process
     ...    BugBakery.exe
