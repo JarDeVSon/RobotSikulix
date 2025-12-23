@@ -1,10 +1,11 @@
 * Settings *
 Documentation       Suite de teste de venda no PDV
 
-Resource        ${EXECDIR}/resources/base.robot
+Resource        ${EXECDIR}\\resources\\base.robot
 
-Suite Setup     Inicia Sessão
+Test Setup   Inicia Sessão
 Suite Teardown  Encerrar Sessão
+Test Teardown   Finaliza Teste
 
 * Test Cases *
 Vender o melhor combo
@@ -15,5 +16,9 @@ Vender o melhor combo
     Finalizar a Venda
     Deve fechar o pedido com sucesso
 
-    [Teardown]      Finaliza Teste
-    
+Vender apenas uma cocacola
+    Abrir PDV
+    Selecionar o Funcionario        func-fernando
+    Adicionar um Item               produto-cocacola    1
+    Finalizar a Venda
+    Deve fechar o pedido com sucesso    

@@ -1,17 +1,25 @@
 * Settings *
 Documentation       Tudo deve começar por aqui
 
-Library         SikuliLibrary
-
+Library         SikuliLibrary    timeout=60    
+Library         Process
 Resource        actions/pdv.robot
 
 * Keywords *
 Carrega os Elementos do App
-    Add Image Path      ${EXECDIR}\\resources\\elements
+    ${app_dir}=    Set Variable    ${EXECDIR}\\app
+    ${proc}=    Start Process
+    ...    BugBakery.exe
+    ...    cwd=${app_dir}
+    ...    shell=True
+    Add Image Path    ${EXECDIR}\\resources\\elements
 
 Inicia Sessão
     Carrega os Elementos do App
-    Click           icone-app.png
+    Wait Until Keyword Succeeds    
+    ...    1 min    
+    ...    5 sec    
+    ...    Exists    menu-vendas.png
 
 Encerrar Sessão
     Stop Remote Server

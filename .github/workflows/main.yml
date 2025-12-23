@@ -1,4 +1,4 @@
-name: Robot Sikuli - Docker Self Hosted
+name: Robot Sikuli - Windows
 
 on:
   push:
@@ -6,23 +6,30 @@ on:
   workflow_dispatch:
 
 jobs:
-  robot-tests:
-    runs-on: self-hosted
+  tests:
+    runs-on: [self-hosted, windows, sikuli]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout do código
+        uses: actions/checkout@v4
 
-      - name: Build imagem
-        run: docker build -t robot-sikuli .
+      - name: Verificar ambiente
+        run: |
+          java -version
+          python --version
 
-      - name: Executar testes
-        run: docker run \
-          -e DISPLAY=:99 \
-          -v $PWD:/tests \
-          robot-sikuli \
-          bash -c "Xvfb :99 -screen 0 1920x1080x24 & robot -d results tests/"
+      - name: Instalar dependências
+        run: |
+          pip install --upgrade pip
+          pip install robotframework
+          pip install robotframework-sikulixlibrary
+          if exist requirements.txt pip install -r requirements.txt
 
-      - name: Upload relatórios
+      - name: Executar testes Robot + Sikuli
+        run: |
+          robot -d results tests/
+
+      - name: Publicar relatórios
         if: always()
         uses: actions/upload-artifact@v4
         with:

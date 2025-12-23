@@ -1,6 +1,7 @@
 * Settings *
 Documentation       Ações de venda no PDV
 
+
 * Keywords *
 Abrir PDV
     Click   menu-vendas.png
