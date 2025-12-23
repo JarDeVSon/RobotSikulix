@@ -1,4 +1,4 @@
-name: Robot Sikuli - Linux
+name: Robot Sikuli - Linux CI
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
 
 jobs:
   sikuli-linux:
-    runs-on: ubuntu-latest  # Runner Linux hospedado pelo GitHub
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     
     steps:
       - name: Checkout do código
@@ -24,46 +25,100 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Configurar display virtual (Xvfb)
+      - name: Instalar dependências do sistema
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb x11-utils x11-apps libxtst6 libxrender1 libxi6
+          sudo apt-get install -y \
+            xvfb \
+            x11-utils \
+            x11-apps \
+            libxtst6 \
+            libxrender1 \
+            libxi6 \
+            wget
 
-      - name: Instalar dependências Python
+      - name: Instalar APENAS a biblioteca correta
         run: |
           pip install --upgrade pip
-          pip install robotframework
+          # Instalar APENAS a biblioteca SikuliLibrary (que você já tem funcionando)
           pip install robotframework-SikuliLibrary
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Baixar SikuliX
-        run: |
-          wget -O sikulix.jar "https://launchpad.net/sikuli/sikulix/2.0.5/+download/sikulixapi-2.0.5.jar"
-          ls -lh sikulix.jar
-
-      - name: Executar testes com display virtual
-        run: |
-          # Inicia Xvfb em background
-          Xvfb :99 -screen 0 1920x1080x24 &
-          export DISPLAY=:99
           
-          # Dá tempo para o display inicializar
+          # Verificar instalação CORRETA
+          python -c "import SikuliLibrary; print('✅ SikuliLibrary importada com sucesso')"
+
+      - name: Baixar SikuliX JAR
+        run: |
+          wget -O sikulixapi.jar "https://launchpad.net/sikuli/sikulix/2.0.5/+download/sikulixapi-2.0.5.jar"
+          echo "✅ JAR baixado: $(ls -lh sikulixapi.jar)"
+
+      - name: Preparar ambiente
+        run: |
+          # Criar diretórios necessários
+          mkdir -p results/screenshots ~/.Sikulix/SikulixStore
+          
+          # Configurar arquivo do SikuliX (resolve erro "FileManager: writeStringToFile")
+          echo "$(pwd)/sikulixapi.jar" > ~/.Sikulix/SikulixStore/lastUsedJar.txt
+          
+          echo "✅ Ambiente preparado"
+
+      - name: Configurar display virtual Xvfb
+        run: |
+          # Iniciar Xvfb (ignorar warnings do xkbcomp)
+          Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset 2>/dev/null &
           sleep 5
           
-          # Inicia SikuliX Server
-          java -jar sikulix.jar -r -s &
+          export DISPLAY=:99
+          
+          # Testar se o display funciona
+          if xdpyinfo -display $DISPLAY > /dev/null 2>&1; then
+            echo "✅ Display virtual configurado: $DISPLAY"
+          else
+            echo "❌ Falha no display virtual"
+            exit 1
+          fi
+
+      - name: Iniciar SikuliX Server CORRETAMENTE
+        run: |
+          echo "Iniciando SikuliX Server..."
+          # O comando CORRETO para SikuliX 2.0.5
+          java -jar sikulixapi.jar -r -s &
           sleep 10
           
-          # Executa os testes
-          robot -d results tests/
+          # Verificar se Java está rodando
+          if pgrep -f "sikulixapi" > /dev/null; then
+            echo "✅ SikuliX Server iniciado"
+          else
+            echo "⚠️  SikuliX pode não ter iniciado, mas continuando..."
+          fi
+
+      - name: Executar testes
+        run: |
+          echo "=== EXECUTANDO TESTES ==="
           
-          # Para os serviços
-          killall java
-          killall Xvfb
+          # IMPORTANTE: A biblioteca SikuliLibrary espera a variável SIKULI_PATH
+          export SIKULI_PATH=$(pwd)/sikulixapi.jar
+          
+          # Executar testes com timeout maior
+          robot -d results \
+                --variable SIKULI_PATH:$SIKULI_PATH \
+                --variable DISPLAY:$DISPLAY \
+                --variable TIMEOUT:60 \
+                --screenshot onfailure \
+                --loglevel TRACE \
+                tests/
+          
+          echo "✅ Testes executados"
+
+      - name: Limpar processos
+        if: always()
+        run: |
+          pkill -f "sikulixapi" 2>/dev/null || true
+          pkill -f "Xvfb.*:99" 2>/dev/null || true
 
       - name: Publicar resultados
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sikuli-linux-results
+          name: sikuli-results
           path: results/
+          retention-days: 7
