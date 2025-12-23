@@ -40,6 +40,7 @@ jobs:
       - name: Instalar APENAS a biblioteca correta
         run: |
           pip install --upgrade pip
+          pip install robotframework
           # Instalar APENAS a biblioteca SikuliLibrary (que você já tem funcionando)
           pip install robotframework-SikuliLibrary
           
