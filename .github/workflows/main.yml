@@ -7,7 +7,7 @@ on:
 
 jobs:
   tests:
-    runs-on: [self-hosted, windows, sikuli, tests]  # Usa os labels do seu runner
+    runs-on: windows-latest  
 
     steps:
       - name: Checkout do código
