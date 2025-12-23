@@ -1,0 +1,30 @@
+name: Robot Sikuli - Docker Self Hosted
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  robot-tests:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build imagem
+        run: docker build -t robot-sikuli .
+
+      - name: Executar testes
+        run: docker run \
+          -e DISPLAY=:99 \
+          -v $PWD:/tests \
+          robot-sikuli \
+          bash -c "Xvfb :99 -screen 0 1920x1080x24 & robot -d results tests/"
+
+      - name: Upload relatórios
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-results
+          path: results
