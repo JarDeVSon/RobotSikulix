@@ -1,4 +1,4 @@
-name: Robot Sikuli - Linux CI (Modo NEW Corrigido)
+name: Robot Sikuli - Linux CI (Modo NEW com Compilação)
 
 on:
   push:
@@ -34,20 +34,29 @@ jobs:
             libxtst6 \
             libxrender1 \
             libxi6 \
-            wget
+            wget \
+            maven
 
       - name: Instalar biblioteca Robot e Sikuli
         run: |
           pip install --upgrade pip
           pip install robotframework
-          # Instala APENAS a biblioteca cliente
           pip install robotframework-SikuliLibrary
-          python -c "import SikuliLibrary; print('✅ SikuliLibrary importada')"
 
       - name: Baixar SikuliX API JAR
         run: |
           wget -O sikulixapi.jar "https://launchpad.net/sikuli/sikulix/2.0.5/+download/sikulixapi-2.0.5.jar"
           echo "✅ JAR baixado: $(ls -lh sikulixapi.jar)"
+
+      - name: Compilar SikuliLibrary a partir do fonte
+        run: |
+          git clone https://github.com/MarketSquare/robotframework-SikuliLibrary.git
+          cd robotframework-SikuliLibrary
+          mvn package -DskipTests
+          # Copiar o JAR gerado para o diretório raiz
+          cp target/SikuliLibrary.jar ../
+          cd ..
+          echo "✅ SikuliLibrary.jar compilado"
 
       - name: Configurar display virtual Xvfb
         run: |
@@ -62,11 +71,10 @@ jobs:
 
       - name: Iniciar Servidor Sikuli Remoto (Modo NEW)
         run: |
-          # Esta é a forma CORRETA de iniciar o servidor remoto incluído na biblioteca
-          # O servidor precisa do JAR do SikuliX no classpath
-          java -cp "sikulixapi.jar:/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/SikuliLibrary/lib/SikuliLibrary.jar" \
+          # Usar o SikuliLibrary.jar compilado e o sikulixapi.jar
+          java -cp "sikulixapi.jar:SikuliLibrary.jar" \
                org.robotframework.remoteserver.RemoteServer \
-               --library SikuliLibrary.SikuliLibrary \
+               --library com.github.rainmanwy.robotframework.sikulilib.SikuliLibrary \
                --port 10000 \
                --allow-stop true &
           SERVER_PID=$!
@@ -74,12 +82,15 @@ jobs:
           if ps -p $SERVER_PID > /dev/null; then
             echo "✅ Servidor remoto iniciado (PID: $SERVER_PID) na porta 10000"
           else
-            echo "❌ Servidor não iniciou. Verifique o classpath e logs."; exit 1
+            echo "❌ Servidor não iniciou. Verifique o classpath e logs."
+            # Tentar verificar se a classe existe
+            echo "Verificando classes no JAR..."
+            jar tf SikuliLibrary.jar | grep -i sikuli
+            exit 1
           fi
 
       - name: Executar testes Robot
         run: |
-          # A variável REMOTE_SERVER_URL é usada pela biblioteca em modo NEW
           export REMOTE_SERVER_URL=http://127.0.0.1:10000
           export SIKULI_PATH=$(pwd)/sikulixapi.jar
 
@@ -104,4 +115,3 @@ jobs:
         with:
           name: sikuli-results
           path: results/
-          retention-days: 7
