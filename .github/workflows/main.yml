@@ -64,7 +64,7 @@ jobs:
           
           # Verifica instalação
           python -c "import jpype; print('✓ JPype1 importado com sucesso')"
-          python -c "import robot.libraries.SikuliXLibrary; print('✓ SikuliXLibrary importada com sucesso')"
+          python -c "import robot.libraries.SikuliLibrary; print('✓ SikuliXLibrary importada com sucesso')"
 
       - name: Iniciar SikuliX Server em segundo plano
         run: |
