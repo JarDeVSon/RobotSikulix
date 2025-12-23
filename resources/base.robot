@@ -1,7 +1,7 @@
 * Settings *
 Documentation       Tudo deve começar por aqui
 
-Library         SikuliLibrary    timeout=60    
+Library         SikuliLibrary    mode=OLD    timeout=10
 Library         Process
 Resource        actions/pdv.robot
 
