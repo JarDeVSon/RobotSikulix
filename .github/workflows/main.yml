@@ -90,11 +90,8 @@ jobs:
 
       - name: Executar testes Robot (modo NEW simples)
         run: |
-          export REMOTE_SERVER_URL=http://127.0.0.1:10000
-          robot -d results \
-                --variable REMOTE_SERVER_URL:$REMOTE_SERVER_URL \
-                --loglevel DEBUG \
-                tests/ 2>&1 | tee robot_output.log
+          
+          robot -d results tests/
           echo "Status de saída do robot: $?"
 
       - name: Coletar logs em caso de falha
