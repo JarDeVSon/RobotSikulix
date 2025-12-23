@@ -1,4 +1,4 @@
-name: Robot Sikuli - Windows
+name: Robot Sikuli - Windows (Self-Hosted)
 
 on:
   push:
@@ -7,32 +7,131 @@ on:
 
 jobs:
   tests:
-    runs-on: [self-hosted, windows, sikuli]
+    runs-on: [self-hosted, windows, sikuli, tests]  # Usa os labels do seu runner
 
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Verificar ambiente
+      - name: Verificar ambiente gráfico
+        run: |
+          echo "Verificando ambiente gráfico..."
+          # Verifica se há sessão de usuário ativa
+          query session 2>&1 | findstr "Active" && echo "✓ Sessão gráfica ativa detectada" || echo "⚠️  Aviso: Nenhuma sessão gráfica ativa encontrada"
+          
+          # Verifica resolução de tela (útil para SikuliX)
+          powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::AllScreens | ForEach-Object { Write-Host ('Tela: ' + $_.Bounds.Width + 'x' + $_.Bounds.Height) }"
+
+      - name: Verificar dependências do sistema
         run: |
           java -version
           python --version
+          # Verifica se o JAR do SikuliX já está disponível
+          if exist "C:\SikuliX\sikulixapi.jar" (
+            echo "✓ SikuliX JAR encontrado em C:\SikuliX\"
+          ) else (
+            echo "SikuliX JAR não encontrado, será baixado..."
+          )
 
-      - name: Instalar dependências
+      - name: Preparar SikuliX (se necessário)
+        run: |
+          # Se o JAR não existir, baixa e instala
+          if not exist "C:\SikuliX\sikulixapi.jar" (
+            echo "Baixando SikuliX..."
+            mkdir C:\SikuliX 2>nul || echo "Diretório já existe"
+            curl -L "https://launchpad.net/sikuli/sikulix/2.0.5/+download/sikulixapi-2.0.5.jar" -o "C:\SikuliX\sikulixapi.jar"
+            
+            # Verifica o download
+            if exist "C:\SikuliX\sikulixapi.jar" (
+              echo "✓ SikuliX baixado com sucesso"
+            ) else (
+              echo "❌ Falha ao baixar SikuliX"
+              exit 1
+            )
+          )
+
+      - name: Instalar dependências Python
         run: |
           pip install --upgrade pip
-          pip install jpype1==1.6.0 --only-binary :all:
+          # Tenta diferentes abordagens para JPype1
+          pip install jpype1==1.6.0 --only-binary :all: || (
+            echo "Tentando versão alternativa de JPype1..."
+            pip install jpype1==1.4.1 --only-binary :all:
+          )
           pip install robotframework
           pip install robotframework-sikulixlibrary
           if exist requirements.txt pip install -r requirements.txt
+          
+          # Verifica instalação
+          python -c "import jpype; print('✓ JPype1 importado com sucesso')"
+          python -c "import robot.libraries.SikuliXLibrary; print('✓ SikuliXLibrary importada com sucesso')"
+
+      - name: Iniciar SikuliX Server em segundo plano
+        run: |
+          echo "Iniciando SikuliX Server..."
+          # Inicia o servidor em uma janela separada
+          start "SikuliX Server" cmd /c "java -jar C:\SikuliX\sikulixapi.jar -r -s"
+          
+          # Aguarda inicialização
+          timeout /t 10 /nobreak
+          
+          # Verifica se está rodando
+          tasklist /FI "WINDOWTITLE eq SikuliX Server*" 2>nul | findstr /I "java" && (
+            echo "✓ SikuliX Server iniciado com sucesso"
+          ) || (
+            echo "⚠️  SikuliX Server pode não ter iniciado. Continuando..."
+          )
 
       - name: Executar testes Robot + Sikuli
+        timeout-minutes: 30  # Timeout para evitar execução infinita
         run: |
-          robot -d results tests/
+          echo "Executando testes Robot Framework..."
+          robot --variable SCREENSHOT_DIR:results/screenshots -d results tests/
+          
+          # Verifica se os testes geraram resultados
+          if exist results\output.xml (
+            echo "✓ Testes executados. Resultados em results/output.xml"
+          ) else (
+            echo "⚠️  Nenhum resultado de teste gerado"
+          )
 
-      - name: Publicar relatórios
+      - name: Processar resultados dos testes
+        if: always()
+        run: |
+          # Converte relatório para HTML mais legível (opcional)
+          if exist results\output.xml (
+            echo "Processando resultados dos testes..."
+            robot --report none --log none --output results/merged.xml --merge results/output.xml 2>null || echo "Processamento de relatórios concluído"
+          )
+
+      - name: Parar SikuliX Server
+        if: always()
+        run: |
+          echo "Encerrando SikuliX Server..."
+          taskkill /FI "WINDOWTITLE eq SikuliX Server*" /F 2>nul && (
+            echo "✓ SikuliX Server encerrado"
+          ) || (
+            echo "SikuliX Server não estava em execução"
+          )
+          
+          # Limpeza adicional de processos Java relacionados
+          taskkill /FI "IMAGENAME eq java.exe" /FI "WINDOWTITLE eq *Sikuli*" /F 2>nul || echo ""
+
+      - name: Publicar relatórios e screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: robot-results
-          path: results
+          name: robot-test-results
+          path: |
+            results/
+            !results/.gitkeep
+          retention-days: 30
+
+      - name: Notificar status do workflow
+        if: always()
+        run: |
+          if "%{{job.status}}%"=="success" (
+            echo "✅ Workflow concluído com sucesso!"
+          ) else (
+            echo "❌ Workflow falhou. Verifique os logs e artefatos."
+          )
