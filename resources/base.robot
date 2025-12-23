@@ -12,14 +12,15 @@ Carrega os Elementos do App
     ...    BugBakery.exe
     ...    cwd=${app_dir}
     ...    shell=True
-    Add Image Path    ${EXECDIR}\\resources\\elements
-
-Inicia Sessão
-    Carrega os Elementos do App
     Wait Until Keyword Succeeds    
     ...    1 min    
     ...    5 sec    
     ...    Exists    menu-vendas.png
+    Add Image Path    ${EXECDIR}\\resources\\elements
+
+Inicia Sessão
+    Carrega os Elementos do App
+    
 
 Encerrar Sessão
     Stop Remote Server

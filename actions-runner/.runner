@@ -1,0 +1,11 @@
+﻿{
+  "agentId": 22,
+  "agentName": "JARDESON",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus9.actions.githubusercontent.com/64QiDNPdhPYTDPBLeHKJ6FwknYvT0hMbkcO0VfvCIetVkLow0m/",
+  "gitHubUrl": "https://github.com/JarDeVSon/RobotSikulix",
+  "workFolder": "sikuli robot",
+  "useV2Flow": true,
+  "serverUrlV2": "https://broker.actions.githubusercontent.com/"
+}

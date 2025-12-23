@@ -21,6 +21,7 @@ jobs:
       - name: Instalar dependências
         run: |
           pip install --upgrade pip
+          pip install jpype1==1.6.0 --only-binary :all:
           pip install robotframework
           pip install robotframework-sikulixlibrary
           if exist requirements.txt pip install -r requirements.txt
