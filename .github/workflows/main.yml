@@ -33,7 +33,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install robotframework
-          pip install robotframework-sikulixlibrary
+          pip install robotframework-SikuliLibrary
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Baixar SikuliX
